@@ -22,7 +22,55 @@
     <h3 class="card-title">Tải lên Video</h3>
   </div>
   
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+  <style>
+    .video-upload-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .device-select-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--muted);
+      padding: 0.75rem;
+    }
+
+    .device-select-body {
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .device-select-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+    }
+
+    .device-select-item:last-child {
+      margin-bottom: 0;
+    }
+
+    @@media (max-width: 768px) {
+      .video-upload-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .device-select-body {
+        max-height: 220px;
+      }
+    }
+  </style>
+
+  <div class="video-upload-grid">
     <div>
       <div class="upload-area" id="dropZone">
         <input type="file" id="videoFile" accept="video/*" onchange="onFileSelect(this)" />
@@ -36,16 +84,18 @@
       </div>
     </div>
     <div style="display: flex; flex-direction: column; gap: 1rem;">
-      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+      <div>
         <label class="form-label">Chọn thiết bị</label>
-        <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem; background: var(--muted);">
-          @foreach (var device in devices)
-          {
-            <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; margin-bottom: 0.5rem;">
-              <input type="checkbox" name="selectedDevices" value="@device.Id" style="accent-color: var(--primary);" />
-              <span class="text-sm">@device.DeviceCode - @device.Location</span>
-            </label>
-          }
+        <div class="device-select-panel">
+          <div class="device-select-body">
+            @foreach (var device in devices)
+            {
+              <label class="device-select-item">
+                <input type="checkbox" name="selectedDevices" value="@device.Id" style="accent-color: var(--primary);" />
+                <span class="text-sm">@device.DeviceCode - @device.Location</span>
+              </label>
+            }
+          </div>
         </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
