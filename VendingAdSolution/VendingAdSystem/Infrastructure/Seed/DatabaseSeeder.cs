@@ -11,18 +11,21 @@ public static class DatabaseSeeder
     {
         db.Database.EnsureCreated();
 
-        EnsureColumn(db, "Users", "Username", "TEXT NOT NULL DEFAULT ''");
-        EnsureColumn(db, "Devices", "UserId", "INTEGER NULL");
-        EnsureColumn(db, "Devices", "ClaimCode", "TEXT NULL");
-        EnsureColumn(db, "Devices", "ClaimedAt", "TEXT NULL");
-        EnsureColumn(db, "Medias", "UserId", "INTEGER NULL");
-        EnsurePlaybackScheduleColumns(db);
-        MigratePlaylistsSchema(db);
-        EnsurePlaybackScheduleTables(db);
+        if (db.Database.IsSqlite())
+        {
+            EnsureColumn(db, "Users", "Username", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(db, "Devices", "UserId", "INTEGER NULL");
+            EnsureColumn(db, "Devices", "ClaimCode", "TEXT NULL");
+            EnsureColumn(db, "Devices", "ClaimedAt", "TEXT NULL");
+            EnsureColumn(db, "Medias", "UserId", "INTEGER NULL");
+            EnsurePlaybackScheduleColumns(db);
+            MigratePlaylistsSchema(db);
+            EnsurePlaybackScheduleTables(db);
 
-        db.Database.ExecuteSqlRaw("UPDATE Users SET Username = Email WHERE Username = ''");
-        db.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_Users_Username ON Users (Username)");
-        db.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_Devices_ClaimCode ON Devices (ClaimCode) WHERE ClaimCode IS NOT NULL");
+            db.Database.ExecuteSqlRaw("UPDATE Users SET Username = Email WHERE Username = ''");
+            db.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_Users_Username ON Users (Username)");
+            db.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_Devices_ClaimCode ON Devices (ClaimCode) WHERE ClaimCode IS NOT NULL");
+        }
 
         if (!db.Admins.Any())
         {

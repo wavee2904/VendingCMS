@@ -9,8 +9,16 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      - key: DatabaseProvider
+        value: Postgres
       - key: ConnectionStrings__DefaultConnection
-        value: Data Source=/data/vendingad.db
+        fromDatabase:
+          name: vending-ad-db
+          property: connectionString
       - key: UploadsPath
         value: /data/uploads
-databases: []
+databases:
+  - name: vending-ad-db
+    plan: free
+    databaseName: vendingad
+    user: vendingad
