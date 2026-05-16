@@ -1,0 +1,97 @@
+@model List<Device>
+@{
+    ViewData["Title"] = "Bảng điều khiển";
+    var onlineByDeviceCode = ViewBag.OnlineByDeviceCode as Dictionary<string, bool> ?? new Dictionary<string, bool>();
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Bảng điều khiển thiết bị</h1>
+    <p class="text-muted">Trạng thái thời gian thực của tất cả thiết bị đã đăng ký</p>
+  </div>
+</div>
+
+@{
+    var online  = Model.Count(d => onlineByDeviceCode.GetValueOrDefault(d.DeviceCode));
+    var offline = Model.Count - online;
+}
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">@Model.Count</div>
+    <div class="stat-label">Tổng thiết bị</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value stat-success">@online</div>
+    <div class="stat-label">Đang online</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value stat-danger">@offline</div>
+    <div class="stat-label">Ngoại tuyến</div>
+  </div>
+</div>
+
+<div class="table-wrapper">
+  @if (!Model.Any())
+  {
+    <div class="empty-state">
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📟</div>
+      <p>Chưa có thiết bị nào được đăng ký.</p>
+      <p class="text-sm text-muted">Thiết bị sẽ xuất hiện tự động sau lần heartbeat đầu tiên.</p>
+    </div>
+  }
+  else
+  {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Trạng thái</th>
+          <th>Mã thiết bị</th>
+          <th>Nội dung</th>
+          <th>Lần cuối hoạt động (UTC)</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var device in Model)
+        {
+          var isOnline = onlineByDeviceCode.GetValueOrDefault(device.DeviceCode);
+          <tr>
+            <td>
+              @if (isOnline)
+              {
+                <span class="badge badge-success">
+                  <span class="status-dot status-online" style="animation: blink 1.8s ease-in-out infinite;"></span>Đang online
+                </span>
+              }
+              else
+              {
+                <span class="badge badge-danger">
+                  <span class="status-dot status-offline"></span>Ngoại tuyến
+                </span>
+              }
+            </td>
+            <td><strong style="color: var(--primary); font-family: monospace;">@device.DeviceCode</strong></td>
+            <td class="text-muted"><span style="font-style: italic;">— dùng schedule —</span></td>
+            <td class="text-muted text-sm">
+              @(device.LastSeen.HasValue
+                ? TimeZoneInfo.ConvertTimeFromUtc(device.LastSeen.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).ToString("yyyy-MM-dd HH:mm:ss")
+                : "Chưa bao giờ")
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+<p class="text-sm text-muted" style="margin-top: 1rem; text-align: right;">
+  Đang online = còn Redis presence TTL hoặc heartbeat gần nhất còn hiệu lực · Tự động cập nhật mỗi 30 giây
+</p>
+
+<style>
+  @@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+</style>
+
+<script>
+  setTimeout(() => location.reload(), 30_000);
+</script>

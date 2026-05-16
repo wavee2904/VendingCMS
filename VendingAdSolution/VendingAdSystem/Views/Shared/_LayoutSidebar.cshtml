@@ -1,0 +1,287 @@
+@{
+    var adminEmail = Context.Session.GetString("AdminEmail");
+    var displayName = Context.Session.GetString("UserDisplayName") ?? Context.Session.GetString("UserEmail") ?? (adminEmail ?? "User");
+    var isPortalUser = Context.Session.GetInt32("UserId") != null && Context.Session.GetInt32("UserId") > 0;
+    var isAdmin = !string.IsNullOrEmpty(adminEmail);
+    var roleLabel = isAdmin ? "Quản trị viên" : "Người dùng";
+    var topDisplayName = Context.Session.GetString("UserDisplayName") ?? Context.Session.GetString("UserEmail") ?? (adminEmail ?? "Người dùng");
+    var topRoleLabel = isAdmin ? "Quản trị viên" : "Người dùng";
+    var topAvatar = string.IsNullOrWhiteSpace(topDisplayName) ? "U" : topDisplayName.Trim().Substring(0,1).ToUpper();
+    var currentUrl = Context.Request.Path.ToString().ToLower();
+    var toastMessages = new List<Dictionary<string, string>>();
+
+    if (TempData["Success"] is string successMessage && !string.IsNullOrWhiteSpace(successMessage))
+        toastMessages.Add(new Dictionary<string, string> { ["type"] = "success", ["message"] = successMessage });
+    if (TempData["Error"] is string errorMessage && !string.IsNullOrWhiteSpace(errorMessage))
+        toastMessages.Add(new Dictionary<string, string> { ["type"] = "error", ["message"] = errorMessage });
+    if (TempData["Warning"] is string warningMessage && !string.IsNullOrWhiteSpace(warningMessage))
+        toastMessages.Add(new Dictionary<string, string> { ["type"] = "warning", ["message"] = warningMessage });
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@ViewData["Title"] | VendAD</title>
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/css/ui-components.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/css/ui-effects.css" asp-append-version="true" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <style>
+    .sidebar {
+      width: 256px;
+      background: var(--muted);
+      border-right: 1px solid var(--border);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-logo-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .sidebar-logo span { color: var(--foreground); font-size: 1rem; }
+    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted-foreground);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 8px;
+      margin-bottom: 8px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      color: var(--muted-foreground);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: var(--radius);
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover { background: var(--secondary); color: var(--foreground); }
+    .nav-item.active {
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+    .nav-item.active:hover {
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+    .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+    .sidebar-user {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--background);
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .user-details { flex: 1; min-width: 0; }
+    .user-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 11px; color: var(--muted-foreground); }
+    .logout-btn {
+      display: block;
+      padding: 8px 12px;
+      background: rgba(220,38,38,0.1);
+      color: var(--destructive);
+      text-decoration: none;
+      border-radius: var(--radius);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .logout-btn:hover { background: rgba(220,38,38,0.2); }
+    .main-content {
+      margin-left: 256px;
+      flex: 1;
+      padding: 28px 36px;
+      min-height: 100vh;
+      background: var(--background);
+    }
+    .app-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+
+    .shared-top-header { display:flex; justify-content:flex-end; align-items:center; padding: 10px 24px; margin: -28px -36px 18px; position: sticky; top: 0; background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 100%); border-bottom: 1px solid #e3ebf7; box-shadow: 0 8px 20px rgba(15, 23, 42, .06); z-index: 120; }
+    .shared-top-header .dashboard-actions { display:flex; gap:.65rem; align-items:center; margin-left:auto; }
+
+    @@media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s; }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+      .shared-top-header { margin: 0 0 12px; border-bottom: 1px solid #e3ebf7; padding: 8px; }
+      .shared-top-header .dashboard-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="sidebar-logo-badge">VA</span> <span>VendingAds</span></div>
+    <nav class="sidebar-nav">
+      @if (isPortalUser)
+      {
+        <div class="nav-section">
+          <div class="nav-section-title">Danh mục</div>
+          <a href="/portal/dashboard" class="nav-item @(currentUrl.Contains("dashboard") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-speedometer2"></i></span> Bảng điều khiển
+          </a>
+          <a href="/portal/videos" class="nav-item @(currentUrl.Contains("videos") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-film"></i></span> Video
+          </a>
+          <a href="/portal/playlist" class="nav-item @(currentUrl.Contains("playlist") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-card-checklist"></i></span> Danh sách phát
+          </a>
+          <a href="/portal/schedules" class="nav-item @(currentUrl.Contains("schedules") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-calendar3"></i></span> Lịch phát
+          </a>
+          <a href="/portal/devices" class="nav-item @(currentUrl.Contains("devices") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-phone"></i></span> Thiết bị
+          </a>
+          <a href="/portal/device-wall" class="nav-item @(currentUrl.Contains("device-wall") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-display"></i></span> Màn hình thiết bị
+          </a>
+        </div>
+        
+      }
+      @if (isAdmin)
+      {
+        <div class="nav-section">
+          <div class="nav-section-title">Admin</div>
+          <a href="/admin" class="nav-item @(currentUrl == "/admin" ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-speedometer2"></i></span> Thống kê
+          </a>
+          <a href="/admin/users" class="nav-item @(currentUrl.Contains("/admin/users") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-people"></i></span> Tài khoản
+          </a>
+          <a href="/admin/devices" class="nav-item @(currentUrl.Contains("/admin/devices") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-phone"></i></span> Thiết bị
+          </a>
+          <a href="/admin/videos" class="nav-item @(currentUrl.Contains("/admin/videos") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-film"></i></span> Video
+          </a>
+          <a href="/admin/playlists" class="nav-item @(currentUrl.Contains("/admin/playlists") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-card-checklist"></i></span> Danh sách phát
+          </a>
+          <a href="/admin/schedules" class="nav-item @(currentUrl.Contains("/admin/schedules") ? "active" : "")">
+            <span class="nav-icon"><i class="bi bi-calendar3"></i></span> Lịch phát
+          </a>
+        </div>
+      }
+    </nav>
+    
+  </aside>
+
+  <main class="main-content">
+    <div class="shared-top-header">
+      <div class="dashboard-actions">
+                <button class="icon-btn" aria-label="Thông báo"><i class="bi bi-bell"></i><span class="dot">3</span></button>
+        <div class="profile-menu" id="globalProfileMenu">
+          <button type="button" class="profile-btn" onclick="toggleGlobalProfileMenu(event)">
+            <span class="avatar">@topAvatar</span>
+            <span class="profile-meta"><strong>@topDisplayName</strong><small>@topRoleLabel</small></span>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="profile-dropdown" id="globalProfileDropdown">
+            <a href="/profile" class="profile-dropdown-item"><i class="bi bi-person"></i>Tài khoản</a>
+            <a href="/settings" class="profile-dropdown-item"><i class="bi bi-gear"></i>Cài đặt</a>
+            <a href="/account/logout" class="profile-dropdown-item danger"><i class="bi bi-box-arrow-right"></i>Đăng xuất</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="app-shell">
+
+
+      @RenderBody()
+    </div>
+  </main>
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+  <script>
+    (function () {
+      const messages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(toastMessages));
+      const container = document.getElementById('toastContainer');
+
+      window.showToast = function (message, type) {
+        if (!message || !container) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'success');
+        toast.innerHTML = '<div class="toast-body"><div class="toast-title">' + toastTitle(type) + '</div><div class="toast-message"></div></div><button type="button" class="toast-close" aria-label="Đóng">&times;</button>';
+        toast.querySelector('.toast-message').textContent = message;
+        toast.querySelector('.toast-close').addEventListener('click', function () { dismissToast(toast); });
+        container.appendChild(toast);
+        requestAnimationFrame(function () { toast.classList.add('toast-show'); });
+        setTimeout(function () { dismissToast(toast); }, 4500);
+      };
+
+      function toastTitle(type) {
+        if (type === 'error') return 'Có lỗi xảy ra';
+        if (type === 'warning') return 'Cần chú ý';
+        return 'Thành công';
+      }
+
+      function dismissToast(toast) {
+        toast.classList.remove('toast-show');
+        setTimeout(function () { toast.remove(); }, 180);
+      }
+
+      messages.forEach(function (item) { window.showToast(item.message, item.type); });
+      window.toggleGlobalProfileMenu = function (event) {
+        event.stopPropagation();
+        document.getElementById("globalProfileDropdown")?.classList.toggle("open");
+      };
+      document.addEventListener("click", function(e){
+        var menu=document.getElementById("globalProfileMenu");
+        var drop=document.getElementById("globalProfileDropdown");
+        if(menu && drop && !menu.contains(e.target)) drop.classList.remove("open");
+      });
+
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+@model List<PlaybackSchedule>
+@{
+    var devices = (List<Device>)ViewBag.Devices;
+    var playlists = (List<Playlist>)ViewBag.Playlists;
+    var medias = (List<Media>)ViewBag.Medias;
+    var scheduleDraftJson = ViewBag.ScheduleDraftJson as string ?? string.Empty;
+    ViewData["Title"] = "Lịch phát";
+
+    string VietnamDate(DateTime utcDate) => utcDate.AddHours(7).ToString("dd/MM/yyyy");
+    string DateRangeText(PlaybackSchedule schedule) => VietnamDate(schedule.StartDate) == VietnamDate(schedule.EndDate) ? VietnamDate(schedule.StartDate) : $"{VietnamDate(schedule.StartDate)} - {VietnamDate(schedule.EndDate)}";
+    string TimeRangeText(PlaybackSchedule schedule) => $"{schedule.StartTime:hh\\:mm} - {schedule.EndTime:hh\\:mm}";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+
+<div class="schedules-page">
+  <header class="schedules-topbar">
+    <div>
+      <nav class="dashboard-breadcrumb" aria-label="breadcrumb">
+        <span>Danh mục</span><i class="bi bi-chevron-right"></i><span class="active">Lịch phát</span>
+      </nav>
+      <h1 class="dashboard-title">Lịch phát video</h1>
+      <p class="dashboard-subtitle">Danh sách phát đang chạy. Phát nội dung mới ngay bây giờ hoặc lên lịch cho tương lai.</p>
+    </div>
+    <div class="video-stat-actions">
+      <article class="video-stat-card fx-card"><i class="bi bi-calendar3"></i><div><strong>@Model.Count</strong><span>Tổng lịch phát</span></div></article>
+    </div>
+  </header>
+
+  <div class="schedule-mode-grid schedule-mode-grid-modern u-mb-15">
+    <button type="button" class="schedule-mode-card card surface fx-card" onclick="openCreateSchedule('immediate')">
+      <span class="schedule-mode-icon"><i class="bi bi-play-fill"></i></span>
+      <span>
+        <strong>Phát nội dung ngay bây giờ</strong>
+        <small>Chọn nội dung, thiết bị và bắt đầu phát ngay lập tức.</small>
+      </span>
+    </button>
+    <button type="button" class="schedule-mode-card card surface fx-card" onclick="openCreateSchedule('schedule')">
+      <span class="schedule-mode-icon"><i class="bi bi-calendar-event"></i></span>
+      <span>
+        <strong>Tạo lịch phát mới</strong>
+        <small>Đặt ngày giờ và nội dung để tự động phát theo lịch.</small>
+      </span>
+    </button>
+  </div>
+<div class="schedule-create-panel card surface u-hidden u-mb-15" id="createSchedulePanel">
+  <div class="card-header u-flex-head">
+    <div>
+      <h3 class="card-title" id="createPanelTitle">Tạo schedule</h3>
+      <div class="card-description" id="createPanelDescription">Chọn nội dung, thiết bị và khung giờ.</div>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="closeCreateSchedule()">Đóng</button>
+  </div>
+
+  <form method="post" action="/portal/schedules/create" id="scheduleCreateForm" class="schedule-create-form">
+    <input type="hidden" name="actionType" id="scheduleActionType" value="schedule" />
+    <input type="hidden" name="sourceTab" id="scheduleSourceTab" value="media" />
+    <input type="hidden" name="selectedSourcePlaylistId" id="selectedSourcePlaylistId" />
+    <div class="schedule-form-grid">
+      <div class="card schedule-form-card">
+        <div class="card-title">Thông tin</div>
+        <div class="form-group u-mt-075">
+          <label class="form-label">Tên schedule</label>
+          <input class="form-input" name="Name" placeholder="VD: Thứ 2 - 6 / Quầy A" required />
+        </div>
+      </div>
+
+      <div class="card schedule-form-card">
+        <div class="card-title">Khung ngày</div>
+        <div class="date-quick-row">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDateRange('today')">Hôm nay</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDateRange('7d')">7 ngày</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDateRange('30d')">30 ngày</button>
+        </div>
+        <div class="two-field-grid">
+          <div class="form-group">
+            <label class="form-label">Bắt đầu</label>
+            <input class="form-input" type="date" name="StartDate" id="startDate" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kết thúc</label>
+            <input class="form-input" type="date" name="EndDate" id="endDate" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="card schedule-form-card">
+        <div class="card-title">Khung giờ</div>
+        <div class="date-quick-row">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTimeRange('all-day')">Cả ngày</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTimeRange('morning')">Sáng</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTimeRange('afternoon')">Chiều</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTimeRange('evening')">Tối</button>
+        </div>
+        <div class="two-field-grid">
+          <div class="form-group">
+            <label class="form-label">Giờ bắt đầu</label>
+            <input class="form-input" type="time" name="StartTime" id="startTime" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Giờ kết thúc</label>
+            <input class="form-input" type="time" name="EndTime" id="endTime" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="card schedule-form-card">
+        <div class="card-title">Thiết bị phát</div>
+        <div class="schedule-select-panel u-mt-075">
+          @foreach (var d in devices)
+          {
+            <label class="schedule-select-item">
+              <input type="checkbox" name="DeviceIds" value="@d.Id" />
+              <div>
+                <div class="schedule-select-title">@d.DeviceCode</div>
+                <div class="schedule-select-subtitle">@((d.Location ?? "Chưa có vị trí"))</div>
+              </div>
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="card schedule-form-card schedule-source-card">
+        <div class="card-title">Nguồn video</div>
+        <div class="source-tabs u-mt-075">
+          <button type="button" class="source-tab active" id="mediaTabBtn" onclick="switchSourceTab('media')">Video từ kho</button>
+          <button type="button" class="source-tab" id="playlistTabBtn" onclick="switchSourceTab('playlist')">Danh sách phát</button>
+        </div>
+
+        <div id="mediaSourcePanel" class="source-panel">
+          <div class="schedule-select-panel">
+            @foreach (var m in medias)
+            {
+              <label class="schedule-select-item">
+                <input type="checkbox" name="MediaIds" value="@m.Id" data-source="media" />
+                <div>
+                  <div class="schedule-select-title">@m.FileName</div>
+                  <div class="schedule-select-subtitle">@((m.FileSize / 1024 / 1024).ToString()) MB</div>
+                </div>
+              </label>
+            }
+          </div>
+        </div>
+
+        <div id="playlistSourcePanel" class="source-panel u-hidden">
+          <input type="hidden" id="playlistSelect" />
+          <div class="playlist-choice-grid">
+            @foreach (var p in playlists)
+            {
+              var items = p.Items.OrderBy(i => i.OrderIndex).ToList();
+              <button type="button" class="playlist-choice" data-playlist-id="@p.Id" onclick="selectPlaylistSource(@p.Id)">
+                <strong>@p.Name</strong>
+                <span>@items.Count video(s)</span>
+              </button>
+            }
+          </div>
+
+          <div class="playlist-preview" id="playlistPreviewEmpty">
+            Chọn playlist để xem video và kéo thả thứ tự cho schedule này.
+          </div>
+
+          @foreach (var p in playlists)
+          {
+            var items = p.Items.OrderBy(i => i.OrderIndex).ToList();
+            <div class="playlist-preview-list u-hidden" id="playlistPreview-@p.Id" data-playlist-id="@p.Id">
+              @foreach (var item in items)
+              {
+                <div class="playlist-preview-item" draggable="true" data-media-id="@item.MediaId">
+                  <span class="drag-handle">☰</span>
+                  <span class="playlist-preview-order">@(item.OrderIndex + 1)</span>
+                  <div>
+                    <div class="schedule-select-title">@item.Media.FileName</div>
+                    <div class="schedule-select-subtitle">@((item.Media.FileSize / 1024 / 1024).ToString()) MB</div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button class="btn btn-primary fx-btn" type="submit" id="scheduleSubmitBtn">Lên lịch</button>
+    </div>
+  </form>
+</div>
+
+@if (!Model.Any())
+{
+  <div class="schedule-empty-state">
+    <div class="schedule-empty-icon"><i class="bi bi-calendar3"></i><span>31</span></div>
+    <h2>Chưa có lịch phát nào</h2>
+    <p>Tạo lịch phát để lên lịch phát nội dung cho thiết bị.</p>
+    <div class="schedule-empty-actions">
+      <button class="btn btn-primary fx-btn" type="button" onclick="openCreateSchedule('immediate')">Phát ngay</button>
+      <button class="btn btn-secondary fx-soft" type="button" onclick="openCreateSchedule('schedule')">Tạo lịch phát</button>
+    </div>
+    <div class="schedule-tip-box">
+      <strong>Bạn có biết?</strong>
+      <span>Lịch phát có thể lặp lại theo ngày, tuần, tháng hoặc theo khung giờ cố định.</span>
+    </div>
+  </div>
+}
+else
+{
+  <div class="schedule-list-header">
+    <div>
+      <h2 class="section-title u-mb-025">Lịch phát hiện có</h2>
+      <p class="text-sm text-muted">Ưu tiên các lịch đang có để kiểm tra và chỉnh live.</p>
+    </div>
+    <div class="schedule-count">@Model.Count schedule</div>
+  </div>
+
+  <div class="schedule-list">
+    @foreach (var s in Model)
+    {
+      <div class="schedule-summary card @(s.IsActive ? "schedule-active" : "schedule-inactive")">
+        <div class="flex items-center justify-between u-flex-between-start">
+          <div>
+            <div class="schedule-name">@s.Name</div>
+            <div class="schedule-time-row"><span class="time-chip time-chip-date">@DateRangeText(s)</span><span class="time-chip time-chip-clock">@TimeRangeText(s)</span></div>
+            <div class="schedule-badges">
+              @if (s.IsImmediate)
+              {
+                <span class="badge badge-primary">Phát ngay</span>
+              }
+              else
+              {
+                <span class="badge badge-schedule">Đã lên lịch</span>
+              }
+               <span class="badge @(s.IsActive ? "badge-success" : "badge-secondary")">@(s.IsActive ? "Đang hoạt động" : "Đã tắt")</span>
+              <span class="badge badge-secondary">@s.Devices.Count thiết bị</span>
+              <span class="badge badge-secondary">@s.Items.Count video(s)</span>
+            </div>
+          </div>
+          <div class="flex gap-2 u-actions-wrap-end">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="openScheduleDetail(@s.Id)">Chi tiết / Sửa</button>
+            <form method="post" action="/portal/schedules/toggle"><input type="hidden" name="scheduleId" value="@s.Id" /><button class="btn btn-sm btn-secondary" type="submit">@(s.IsActive ? "Tắt" : "Bật")</button></form>
+            <form method="post" action="/portal/schedules/delete" onsubmit="return confirm('Xóa schedule?')"><input type="hidden" name="scheduleId" value="@s.Id" /><button class="btn btn-sm" type="submit">Xóa</button></form>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-overlay u-hidden" id="scheduleDetail-@s.Id">
+        <div class="modal modal-wide schedule-detail-modal">
+          <div class="modal-header">
+            <div>
+              <div class="modal-title">@s.Name</div>
+              <p class="text-sm text-muted">Chi tiết và chỉnh live schedule</p>
+            </div>
+            <button class="modal-close" type="button" onclick="closeScheduleDetail(@s.Id)">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="grid grid-cols-2 u-gap-1">
+              <div class="card">
+                <div class="card-title">Thông tin</div>
+                <div class="text-sm u-mt-05">Trạng thái: @(s.IsActive ? "Đang hoạt động" : "Đã tắt")</div>
+                <div class="text-sm">Loại: @(s.IsImmediate ? "Phát ngay" : "Lịch thường")</div>
+                <div class="schedule-time-stack u-mt-05"><span class="time-chip time-chip-date">@DateRangeText(s)</span><span class="time-chip time-chip-clock">@TimeRangeText(s)</span></div>
+              </div>
+              <div class="card">
+                <div class="card-title">Thiết bị</div>
+                <div class="flex flex-wrap gap-2 u-mt-05">
+                  @foreach (var d in s.Devices.OrderBy(x => x.Device.DeviceCode))
+                  {
+                    <span class="badge badge-secondary">@d.Device.DeviceCode</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="card u-mt-1">
+              <div class="card-header u-flex-head">
+                <div>
+                  <div class="card-title">Video phát</div>
+                  <div class="card-description">Thêm, xóa, đổi thứ tự ngay khi schedule đang chạy.</div>
+                </div>
+                <div class="text-sm text-muted">Device sync sau vài giây.</div>
+              </div>
+
+              <div class="schedule-item-toolbar">
+                <form method="post" action="/portal/schedules/add-item" class="schedule-add-item-form">
+                  <input type="hidden" name="scheduleId" value="@s.Id" />
+                  <select class="form-input" name="mediaId" required>
+                    <option value="">Chọn video để thêm</option>
+                    @foreach (var media in medias)
+                    {
+                      <option value="@media.Id">@media.FileName</option>
+                    }
+                  </select>
+                  <button type="submit" class="btn btn-primary fx-btn">Thêm</button>
+                </form>
+              </div>
+
+              <div class="table-wrapper u-mt-075">
+                <table class="table schedule-item-table">
+                  <thead>
+                    <tr class="fx-list-row"><th>Thứ tự</th><th>Tên video</th><th>Dung lượng</th><th>Thao tác</th></tr>
+                  </thead>
+                  <tbody>
+                    @foreach (var item in s.Items.OrderBy(i => i.OrderIndex))
+                    {
+                      <tr data-item-id="@item.Id" data-schedule-id="@s.Id" class="schedule-item-row" draggable="true">
+                        <td class="schedule-order-cell">
+                          <span class="schedule-item-handle">☰</span>
+                          <span>#@(item.OrderIndex + 1)</span>
+                        </td>
+                        <td>@item.Media.FileName</td>
+                        <td>@(item.Media.FileSize / 1024 / 1024) MB</td>
+                        <td>
+                          <div class="flex gap-2">
+                            <form method="post" action="/portal/schedules/remove-item" onsubmit="return confirm('Xóa video khỏi schedule?')">
+                              <input type="hidden" name="scheduleItemId" value="@item.Id" />
+                              <button type="submit" class="btn btn-sm">Xóa</button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<style>
+  .schedule-mode-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:1rem; }
+  .schedule-mode-card { display:flex; align-items:center; gap:1rem; text-align:left; border:1px solid var(--border); cursor:pointer; transition: border-color .15s, transform .15s; }
+  .schedule-mode-card:hover { border-color: var(--primary); transform: translateY(-1px); }
+  .schedule-mode-card strong { display:block; color: var(--foreground); font-size: 1rem; }
+  .schedule-mode-card small { display:block; color: var(--muted-foreground); margin-top:.25rem; }
+  .schedule-mode-icon { width:42px; height:42px; border-radius: 999px; display:flex; align-items:center; justify-content:center; background: rgba(37, 99, 235, .1); color: var(--primary); font-weight:700; }
+  .schedule-create-form { display:block; }
+  .schedule-form-grid { display:grid; gap:1rem; }
+  .schedule-form-card { padding: 1rem; }
+  .two-field-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .date-quick-row { display:flex; gap:.5rem; flex-wrap:wrap; margin: .75rem 0 1rem; }
+  .schedule-select-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .schedule-select-panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--muted); padding: 0.75rem; max-height: 280px; overflow-y: auto; }
+  .schedule-select-item { display:flex; align-items:flex-start; gap:.75rem; padding:.75rem; margin-bottom:.5rem; background: var(--background); border:1px solid var(--border); border-radius: var(--radius); cursor:pointer; transition: border-color .15s, background .15s; }
+  .schedule-select-item:last-child { margin-bottom:0; }
+  .schedule-select-item input { margin-top:.2rem; }
+  .schedule-select-title { font-weight:600; color: var(--foreground); }
+  .schedule-select-subtitle { font-size:.75rem; color: var(--muted-foreground); }
+  .schedule-select-item:has(input:checked) { border-color: var(--primary); background: rgba(37, 99, 235, 0.06); }
+  .schedule-source-card { grid-column: 1 / -1; }
+  .source-tabs { display:inline-flex; gap:.35rem; background: var(--muted); padding:.35rem; border-radius: 999px; border:1px solid var(--border); }
+  .source-tab { border:0; background:transparent; color: var(--muted-foreground); padding:.45rem .8rem; border-radius:999px; cursor:pointer; font-weight:600; }
+  .source-tab.active { background: var(--background); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .source-panel { margin-top: 1rem; }
+  .playlist-choice-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.75rem; }
+  .playlist-choice { text-align:left; border:1px solid var(--border); border-radius: var(--radius); background: var(--background); padding:.85rem; cursor:pointer; }
+  .playlist-choice strong { display:block; color: var(--foreground); }
+  .playlist-choice span { display:block; color: var(--muted-foreground); font-size:.75rem; margin-top:.2rem; }
+  .playlist-choice.active { border-color: var(--primary); background: rgba(37, 99, 235, .06); }
+  .playlist-preview { margin-top:1rem; padding:1rem; border:1px dashed var(--border); border-radius: var(--radius); color: var(--muted-foreground); text-align:center; }
+  .playlist-preview-list { margin-top:1rem; display:grid; gap:.5rem; }
+  .playlist-preview-item { display:flex; align-items:center; gap:.75rem; border:1px solid var(--border); border-radius: var(--radius); background: var(--background); padding:.75rem; cursor:grab; }
+  .playlist-preview-item.dragging { opacity:.5; }
+  .drag-handle { color: var(--muted-foreground); cursor:grab; }
+  .playlist-preview-order { width:26px; height:26px; border-radius:999px; display:flex; align-items:center; justify-content:center; background: rgba(37,99,235,.1); color: var(--primary); font-size:.75rem; font-weight:700; }
+  .schedule-list-header { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom: .75rem; }
+  .schedule-count { font-size:.875rem; color: var(--muted-foreground); }
+  .schedule-list { display:grid; gap: .75rem; }
+  .schedule-summary { padding: 1rem 1.25rem; }
+  .schedule-active { border-color: rgba(34, 197, 94, .35); }
+  .schedule-inactive { opacity: .85; }
+  .schedule-name { font-size: 1rem; font-weight: 700; color: var(--foreground); }
+  .schedule-badges { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem; }
+  .schedule-detail-modal .modal-body { max-height: 80vh; overflow-y: auto; }
+  .schedule-item-toolbar { display:flex; justify-content:space-between; gap:1rem; margin-top: 1rem; flex-wrap: wrap; }
+  .schedule-add-item-form { display:flex; gap:.5rem; flex-wrap:wrap; width:100%; }
+  .schedule-add-item-form select { min-width: 240px; flex: 1; }
+  .schedule-item-table tbody tr { cursor: grab; }
+  .schedule-item-table tbody tr.dragging { opacity: .5; }
+  .schedule-order-cell { display:flex; align-items:center; gap:.5rem; }
+  .schedule-item-handle { color: var(--muted-foreground); font-size:.9rem; }
+  @@media (max-width: 768px) {
+    .schedule-mode-grid, .schedule-select-grid, .two-field-grid, .playlist-choice-grid { grid-template-columns: 1fr; }
+    .schedule-list-header { flex-direction:column; align-items:flex-start; }
+  }
+</style>
+
+<script>
+  let createMode = 'schedule';
+  let sourceTab = 'media';
+  let selectedPlaylistId = null;
+  let draggedPlaylistItem = null;
+  let draggedScheduleItem = null;
+  const scheduleDraft = @Html.Raw(string.IsNullOrWhiteSpace(scheduleDraftJson) ? "null" : scheduleDraftJson);
+
+  function openCreateSchedule(mode) {
+    createMode = mode || 'schedule';
+    document.getElementById('scheduleActionType').value = createMode;
+    document.getElementById('createPanelTitle').textContent = createMode === 'immediate' ? 'Tạo danh sách phát ngay' : 'Tạo lịch phát video';
+    document.getElementById('createPanelDescription').textContent = createMode === 'immediate'
+      ? 'Điền thông tin, chọn thiết bị, chọn nguồn video rồi bấm phát.'
+      : 'Đặt ngày giờ, chọn thiết bị, chọn nguồn video rồi lên lịch.';
+    document.getElementById('scheduleSubmitBtn').textContent = createMode === 'immediate' ? 'Phát' : 'Lên lịch';
+
+    document.getElementById('createSchedulePanel').style.display = 'block';
+    setDateRange('today');
+    if (createMode === 'immediate') {
+      setImmediateTimeRange();
+    } else if (!document.getElementById('startTime').value) {
+      setTimeRange('morning');
+    }
+    document.getElementById('createSchedulePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function restoreScheduleDraft() {
+    if (!scheduleDraft) return;
+
+    const form = document.getElementById('scheduleCreateForm');
+    document.getElementById('createSchedulePanel').style.display = 'block';
+    createMode = scheduleDraft.actionType || 'schedule';
+    document.getElementById('scheduleActionType').value = createMode;
+    document.getElementById('createPanelTitle').textContent = createMode === 'immediate' ? 'Tạo danh sách phát ngay' : 'Tạo lịch phát video';
+    document.getElementById('createPanelDescription').textContent = createMode === 'immediate'
+      ? 'Điền thông tin, chọn thiết bị, chọn nguồn video rồi bấm phát.'
+      : 'Đặt ngày giờ, chọn thiết bị, chọn nguồn video rồi lên lịch.';
+    document.getElementById('scheduleSubmitBtn').textContent = createMode === 'immediate' ? 'Phát' : 'Lên lịch';
+
+    form.querySelector('[name="Name"]').value = scheduleDraft.Name || '';
+    document.getElementById('startDate').value = scheduleDraft.startDate || '';
+    document.getElementById('endDate').value = scheduleDraft.endDate || '';
+    document.getElementById('startTime').value = scheduleDraft.startTime || '';
+    document.getElementById('endTime').value = scheduleDraft.endTime || '';
+
+    const draftSourceTab = scheduleDraft.sourceTab || 'media';
+    sourceTab = draftSourceTab;
+    document.getElementById('scheduleSourceTab').value = draftSourceTab;
+    switchSourceTab(draftSourceTab);
+
+    const draftDeviceIds = new Set((scheduleDraft.deviceIds || []).map(String));
+    document.querySelectorAll('#scheduleCreateForm input[name="DeviceIds"]').forEach(input => {
+      input.checked = draftDeviceIds.has(input.value);
+    });
+
+    if (draftSourceTab === 'playlist') {
+      selectedPlaylistId = scheduleDraft.selectedSourcePlaylistId || null;
+      document.getElementById('selectedSourcePlaylistId').value = selectedPlaylistId || '';
+      if (selectedPlaylistId) {
+        selectPlaylistSource(selectedPlaylistId);
+        const selectedList = document.getElementById('playlistPreview-' + selectedPlaylistId);
+        const draftMediaOrder = (scheduleDraft.mediaIds || []).map(String);
+        draftMediaOrder.forEach(mediaId => {
+          const item = selectedList?.querySelector('.playlist-preview-item[data-media-id="' + mediaId + '"]');
+          if (item) selectedList.appendChild(item);
+        });
+        if (selectedList) syncPlaylistOrderNumbers(selectedList);
+      }
+    } else {
+      const draftMediaIds = new Set((scheduleDraft.mediaIds || []).map(String));
+      document.querySelectorAll('#scheduleCreateForm input[name="MediaIds"]').forEach(input => {
+        input.checked = draftMediaIds.has(input.value);
+      });
+    }
+
+    document.getElementById('createSchedulePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function closeCreateSchedule() {
+    document.getElementById('createSchedulePanel').style.display = 'none';
+  }
+
+  function setScheduleAction(value) {
+    document.getElementById('scheduleActionType').value = value;
+  }
+
+  function setTodayDateRange() {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+    document.getElementById('startDate').value = date;
+    document.getElementById('endDate').value = date;
+  }
+
+  function addDays(value, days) {
+    const next = new Date(value.getTime());
+    next.setDate(next.getDate() + days);
+    return next;
+  }
+
+  function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+
+  function setDateRange(mode) {
+    const today = new Date();
+    if (mode === 'today') {
+      document.getElementById('startDate').value = formatDate(today);
+      document.getElementById('endDate').value = formatDate(today);
+      return;
+    }
+
+    if (mode === '7d') {
+      document.getElementById('startDate').value = formatDate(today);
+      document.getElementById('endDate').value = formatDate(addDays(today, 6));
+      return;
+    }
+
+    if (mode === '30d') {
+      document.getElementById('startDate').value = formatDate(today);
+      document.getElementById('endDate').value = formatDate(addDays(today, 29));
+    }
+  }
+
+  function setTimeRange(mode) {
+    const pairs = {
+      'all-day': ['00:00', '23:59'],
+      'morning': ['06:00', '11:59'],
+      'afternoon': ['12:00', '17:59'],
+      'evening': ['18:00', '23:59']
+    };
+    const pair = pairs[mode];
+    if (!pair) return;
+    document.getElementById('startTime').value = pair[0];
+    document.getElementById('endTime').value = pair[1];
+  }
+
+  function setImmediateTimeRange() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('startTime').value = hours + ':' + minutes;
+    document.getElementById('endTime').value = '23:59';
+  }
+
+  function switchSourceTab(tab) {
+    sourceTab = tab;
+    document.getElementById('scheduleSourceTab').value = tab;
+    document.getElementById('mediaSourcePanel').style.display = tab === 'media' ? 'block' : 'none';
+    document.getElementById('playlistSourcePanel').style.display = tab === 'playlist' ? 'block' : 'none';
+    document.getElementById('mediaTabBtn').classList.toggle('active', tab === 'media');
+    document.getElementById('playlistTabBtn').classList.toggle('active', tab === 'playlist');
+
+    document.querySelectorAll('input[data-generated="playlist-media"]').forEach(input => input.remove());
+    if (tab === 'media') {
+      selectedPlaylistId = null;
+      document.getElementById('selectedSourcePlaylistId').value = '';
+      document.querySelectorAll('.playlist-choice').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.playlist-preview-list').forEach(list => list.style.display = 'none');
+      document.getElementById('playlistPreviewEmpty').style.display = 'block';
+    } else {
+      document.querySelectorAll('#mediaSourcePanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+  }
+
+  function selectPlaylistSource(playlistId) {
+    selectedPlaylistId = playlistId;
+    document.getElementById('selectedSourcePlaylistId').value = playlistId;
+    document.querySelectorAll('.playlist-choice').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.playlistId) === playlistId));
+    document.querySelectorAll('.playlist-preview-list').forEach(list => list.style.display = 'none');
+    document.getElementById('playlistPreviewEmpty').style.display = 'none';
+    const selectedList = document.getElementById('playlistPreview-' + playlistId);
+    if (selectedList) selectedList.style.display = 'grid';
+  }
+
+  function syncPlaylistOrderNumbers(list) {
+    list.querySelectorAll('.playlist-preview-item').forEach((item, index) => {
+      item.querySelector('.playlist-preview-order').textContent = index + 1;
+    });
+  }
+
+  function initPlaylistDrag() {
+    document.querySelectorAll('.playlist-preview-item').forEach(item => {
+      item.addEventListener('dragstart', function (e) {
+        draggedPlaylistItem = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      item.addEventListener('dragend', function () {
+        this.classList.remove('dragging');
+        draggedPlaylistItem = null;
+        syncPlaylistOrderNumbers(this.parentElement);
+      });
+
+      item.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      item.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (!draggedPlaylistItem || draggedPlaylistItem === this) return;
+
+        const container = this.parentElement;
+        const items = Array.from(container.querySelectorAll('.playlist-preview-item'));
+        const fromIndex = items.indexOf(draggedPlaylistItem);
+        const toIndex = items.indexOf(this);
+        if (fromIndex < toIndex) {
+          container.insertBefore(draggedPlaylistItem, this.nextSibling);
+        } else {
+          container.insertBefore(draggedPlaylistItem, this);
+        }
+        syncPlaylistOrderNumbers(container);
+      });
+    });
+  }
+
+  function syncScheduleOrderNumbers(container) {
+    container.querySelectorAll('.schedule-item-row').forEach((row, index) => {
+      const orderCell = row.querySelector('.schedule-order-cell span:last-child');
+      if (orderCell) orderCell.textContent = '#' + (index + 1);
+    });
+  }
+
+  function saveScheduleOrder(container) {
+    const firstRow = container.querySelector('.schedule-item-row');
+    if (!firstRow) return;
+
+    const scheduleId = parseInt(firstRow.dataset.scheduleId);
+    const updates = Array.from(container.querySelectorAll('.schedule-item-row')).map((row, orderIndex) => ({
+      scheduleItemId: parseInt(row.dataset.itemId),
+      orderIndex
+    }));
+
+    fetch('/portal/schedules/update-item-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduleId: scheduleId, updates: updates })
+    }).then(r => {
+      if (!r.ok) location.reload();
+    }).catch(() => location.reload());
+  }
+
+  function initScheduleDrag() {
+    document.querySelectorAll('.schedule-item-row').forEach(row => {
+      row.addEventListener('dragstart', function (e) {
+        draggedScheduleItem = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      row.addEventListener('dragend', function () {
+        this.classList.remove('dragging');
+        draggedScheduleItem = null;
+      });
+
+      row.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      row.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (!draggedScheduleItem || draggedScheduleItem === this) return;
+
+        const container = this.parentElement;
+        const rows = Array.from(container.querySelectorAll('.schedule-item-row'));
+        const fromIndex = rows.indexOf(draggedScheduleItem);
+        const toIndex = rows.indexOf(this);
+        if (fromIndex < toIndex) {
+          container.insertBefore(draggedScheduleItem, this.nextSibling);
+        } else {
+          container.insertBefore(draggedScheduleItem, this);
+        }
+
+        syncScheduleOrderNumbers(container);
+        saveScheduleOrder(container);
+      });
+    });
+  }
+
+  document.getElementById('scheduleCreateForm').addEventListener('submit', function (e) {
+    document.querySelectorAll('input[data-generated="playlist-media"]').forEach(input => input.remove());
+    document.getElementById('scheduleSourceTab').value = sourceTab;
+
+    if (sourceTab !== 'playlist') return;
+
+    const selectedList = selectedPlaylistId ? document.getElementById('playlistPreview-' + selectedPlaylistId) : null;
+    if (!selectedList) {
+      e.preventDefault();
+      window.showToast('Chọn playlist trước khi tạo schedule.', 'error');
+      return;
+    }
+
+    const mediaIds = Array.from(selectedList.querySelectorAll('.playlist-preview-item')).map(item => item.dataset.mediaId);
+    if (!mediaIds.length) {
+      e.preventDefault();
+      window.showToast('Danh sách phát chưa có video.', 'error');
+      return;
+    }
+
+    mediaIds.forEach(mediaId => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'MediaIds';
+      input.value = mediaId;
+      input.dataset.generated = 'playlist-media';
+      this.appendChild(input);
+    });
+  });
+
+  initPlaylistDrag();
+  initScheduleDrag();
+  restoreScheduleDraft();
+
+  function openScheduleDetail(id) {
+    document.getElementById('scheduleDetail-' + id).style.display = 'flex';
+  }
+
+  function closeScheduleDetail(id) {
+    document.getElementById('scheduleDetail-' + id).style.display = 'none';
+  }
+
+</script>
+
+</div>

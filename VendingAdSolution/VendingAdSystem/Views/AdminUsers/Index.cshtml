@@ -1,0 +1,127 @@
+@model List<User>
+@{
+    ViewData["Title"] = "Quản lý Tài khoản";
+    var adminEmail = Context.Session.GetString("AdminEmail");
+}
+
+<div class="page-header">
+  <h1 class="page-title">Quản lý Tài khoản</h1>
+</div>
+
+<div class="card u-mb-1">
+    <div class="card-header">
+    <h3 class="card-title">Tạo tài khoản mới</h3>
+  </div>
+  <form method="post" action="/admin/users/create" class="grid grid-cols-3 u-gap-1 u-items-end">
+    <div class="form-group">
+      <label class="form-label">Tên đăng nhập</label>
+      <input type="text" name="username" class="form-input" required />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" name="email" class="form-input" required />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tên hiển thị</label>
+      <input type="text" name="fullName" class="form-input" />
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary">Tạo mới</button>
+    </div>
+  </form>
+    <p class="text-sm text-muted u-mt-075">Mật khẩu mặc định: <strong>TD@12345</strong></p>
+</div>
+
+@if (!Model.Any())
+{
+  <div class="empty-state">
+    <div class="u-empty-icon-lg">👥</div>
+    <p>Chưa có tài khoản nào</p>
+  </div>
+}
+else
+{
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+      <th>Tên đăng nhập</th>
+          <th>Email</th>
+          <th>Tên</th>
+          <th>Vai trò</th>
+      <th>Ngày tạo</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var user in Model)
+        {
+          <tr>
+            <td>@user.Username</td>
+            <td>@user.Email</td>
+            <td>@user.FullName</td>
+            <td>
+              <span class="badge @(user.IsActive ? "badge-primary" : "badge-danger")">@(user.IsActive ? "Hoạt động" : "Vô hiệu hóa")</span>
+            </td>
+            <td class="text-muted">@user.CreatedAt.ToString("yyyy-MM-dd")</td>
+            <td>
+              <div class="action-buttons">
+                <button class="action-btn" onclick="showEditModal(@user.Id, '@user.Username', '@user.Email', '@user.FullName')">✏️</button>
+                <form method="post" action="/admin/users/reset-password">
+                  <input type="hidden" name="userId" value="@user.Id" />
+                  <button type="submit" class="action-btn" onclick="return confirm('Đặt lại mật khẩu cho @user.Username về TD@12345?')">🔑</button>
+                </form>
+                <form method="post" action="/admin/users/toggle-active">
+                  <input type="hidden" name="userId" value="@user.Id" />
+                  <button type="submit" class="action-btn @(user.IsActive ? "action-btn-danger" : "")" onclick="return confirm('@(user.IsActive ? "Vô hiệu hóa" : "Kích hoạt") tài khoản @user.Username?')">@(user.IsActive ? "⛔" : "✅")</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<div class="modal-overlay u-hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Sửa tài khoản</h3>
+      <button class="modal-close" onclick="hideEditModal()">&times;</button>
+    </div>
+    <form method="post" action="/admin/users/update">
+      <input type="hidden" name="userId" id="editUserId" />
+      <div class="form-group">
+        <label class="form-label">Tên đăng nhập</label>
+        <input type="text" name="username" id="editUsername" class="form-input" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" id="editEmail" class="form-input" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên hiển thị</label>
+        <input type="text" name="fullName" id="editFullName" class="form-input" />
+      </div>
+      <div class="flex gap-2 u-mt-125">
+        <button type="button" class="btn btn-secondary flex-1" onclick="hideEditModal()">Hủy</button>
+        <button type="submit" class="btn btn-primary flex-1">Lưu thay đổi</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showEditModal(id, username, email, fullName) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUsername').value = username || '';
+    document.getElementById('editEmail').value = email || '';
+    document.getElementById('editFullName').value = fullName || '';
+    document.getElementById('editModal').style.display = 'flex';
+  }
+
+  function hideEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+  }
+</script>

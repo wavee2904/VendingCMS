@@ -1,0 +1,62 @@
+@using Microsoft.AspNetCore.Http
+@using System.Globalization
+@using VendingAdSystem.Application.DTOs
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Bảng điều khiển";
+    var displayName = Context.Session.GetString("UserDisplayName")
+        ?? Context.Session.GetString("UserEmail")
+        ?? Context.Session.GetString("AdminEmail")
+        ?? "Người dùng";
+    var roleLabel = Context.Session.GetString("AdminEmail") is { Length: > 0 }
+        ? "Quản trị viên"
+        : "Người dùng";
+    var avatarSeed = displayName.Trim();
+    var avatarLetter = avatarSeed.Length > 0
+        ? avatarSeed.Substring(0, 1).ToUpper(CultureInfo.GetCultureInfo("vi-VN"))
+        : "U";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+
+<div class="dashboard-page">
+    <header class="dashboard-topbar">
+        <div>
+            <nav class="dashboard-breadcrumb" aria-label="breadcrumb">
+                <span>@Model.BreadcrumbSection</span>
+                <i class="bi bi-chevron-right"></i>
+                <span class="active">@Model.BreadcrumbPage</span>
+            </nav>
+            <h1 class="dashboard-title">@Model.Title</h1>
+            <p class="dashboard-subtitle">@Model.Subtitle</p>
+        </div>
+    </header>
+
+    @await Html.PartialAsync("~/Views/Shared/Components/_KpiCards.cshtml", Model.Kpis)
+
+    <section class="schedule-grid">
+        @await Html.PartialAsync("~/Views/Shared/Components/_NowPlaying.cshtml", Model.NowPlaying)
+        @await Html.PartialAsync("~/Views/Shared/Components/_Upcoming.cshtml", Model.Upcoming)
+    </section>
+
+    @await Html.PartialAsync("~/Views/Shared/Components/_DeviceGrid.cshtml", Model.Devices)
+</div>
+
+<script>
+  window.quickPlayDeviceMap = window.quickPlayDeviceMap || {};
+
+  function toggleProfileMenu(event) {
+    event.stopPropagation();
+    document.getElementById('profileDropdown')?.classList.toggle('open');
+  }
+
+  document.addEventListener('click', function (event) {
+    var menu = document.getElementById('profileMenu');
+    var dropdown = document.getElementById('profileDropdown');
+    if (!menu || !dropdown) return;
+    if (!menu.contains(event.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
+</script>

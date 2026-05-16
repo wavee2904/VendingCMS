@@ -1,0 +1,167 @@
+@model List<Device>
+@{
+    var users = (List<User>)ViewBag.Users;
+    var onlineByDeviceCode = ViewBag.OnlineByDeviceCode as Dictionary<string, bool> ?? new Dictionary<string, bool>();
+    ViewData["Title"] = "Quản lý Thiết bị";
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Quản lý Thiết bị</h1>
+    <p class="page-subtitle">Thiết bị được đăng ký từ app. Admin chỉ gán thiết bị chưa có chủ cho tài khoản.</p>
+  </div>
+</div>
+
+<div class="flex gap-2 u-mb-125 u-wrap">
+  <select id="userFilter" class="form-input u-w-auto" onchange="filterDevices()">
+    <option value="">Tất cả tài khoản</option>
+    <option value="unassigned">Chưa gán</option>
+    @foreach (var user in users)
+    {
+      <option value="@user.Id">@user.Username</option>
+    }
+  </select>
+</div>
+
+<div class="table-wrapper">
+  @if (!Model.Any())
+  {
+    <div class="empty-state">
+      <div class="u-empty-icon-md">📱</div>
+      <p>Chưa có thiết bị nào.</p>
+    </div>
+  }
+  else
+  {
+    <table class="table" id="deviceTable">
+      <thead>
+        <tr class="fx-list-row">
+          <th>Mã thiết bị</th>
+          <th>Mã liên kết</th>
+          <th>Vị trí</th>
+          <th>Tài khoản</th>
+          <th>Trạng thái</th>
+          <th>Lần cuối hoạt động</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var device in Model)
+        {
+          var isOnline = onlineByDeviceCode.GetValueOrDefault(device.DeviceCode);
+          <tr data-user-id="@(device.UserId?.ToString() ?? string.Empty)">
+            <td><strong class="u-primary-mono">@device.DeviceCode</strong></td>
+            <td>
+              @if (!string.IsNullOrWhiteSpace(device.ClaimCode))
+              {
+                <span class="badge badge-secondary u-mono">@device.ClaimCode</span>
+              }
+              else
+              {
+                <span class="text-muted text-sm">Đã sử dụng</span>
+              }
+            </td>
+            <td class="text-muted">@device.Location</td>
+            <td>
+              <span class="badge @(device.UserId.HasValue ? "badge-primary" : "badge-secondary")">@(device.User?.Username ?? "Chưa gán")</span>
+            </td>
+            <td>
+              @if (isOnline)
+              {
+                <span class="badge badge-success"><span class="status-dot status-online"></span>Đang online</span>
+              }
+              else
+              {
+                <span class="badge badge-danger"><span class="status-dot status-offline"></span>Ngoại tuyến</span>
+              }
+            </td>
+            <td class="text-muted text-sm">
+               @(device.LastSeen.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(device.LastSeen.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).ToString("yyyy-MM-dd HH:mm") : "Chưa bao giờ")
+            </td>
+            <td>
+              <div class="action-buttons">
+                @if (!device.UserId.HasValue)
+                {
+                  <button type="button"
+                          class="btn btn-sm btn-secondary assign-device-btn"
+                          data-device-id="@device.Id"
+                          data-device-code="@device.DeviceCode"
+                          data-location="@(device.Location ?? "Chưa có vị trí")"
+                          data-claim-code="@(device.ClaimCode ?? "Đã sử dụng")">Gán user</button>
+                }
+                <form method="post" action="/admin/devices/delete" onsubmit="return confirm('Xóa thiết bị @device.DeviceCode?')">
+                  <input type="hidden" name="deviceId" value="@device.Id" />
+                  <button type="submit" class="btn btn-sm btn btn-sm u-btn-danger-soft">Xóa</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+<div class="modal-overlay u-hidden" id="assignModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Gán thiết bị cho tài khoản</h3>
+        <p class="text-sm text-muted">Thiết bị và vị trí lấy từ app đăng ký, admin không chỉnh sửa tại đây.</p>
+      </div>
+      <button class="modal-close" onclick="hideAssignModal()">&times;</button>
+    </div>
+    <form method="post" action="/admin/devices/assign">
+      <input type="hidden" name="deviceId" id="assignDeviceId" />
+      <div class="card u-mb-1">
+        <div class="text-sm">Mã thiết bị: <strong id="assignDeviceCode"></strong></div>
+        <div class="text-sm text-muted u-mt-035">Vị trí: <span id="assignLocation"></span></div>
+        <div class="text-sm text-muted u-mt-035">Mã liên kết: <span id="assignClaimCode" class="u-mono"></span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gán cho tài khoản</label>
+        <select name="userId" id="assignUserId" class="form-input" required>
+          <option value="">Chọn tài khoản</option>
+          @foreach (var user in users)
+          {
+            <option value="@user.Id">@user.Username</option>
+          }
+        </select>
+      </div>
+      <div class="flex gap-2 u-mt-125">
+        <button type="button" class="btn btn-secondary flex-1" onclick="hideAssignModal()">Hủy</button>
+        <button type="submit" class="btn btn-primary flex-1">Gán thiết bị</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showAssignModal(id, code, location, claimCode) {
+    document.getElementById('assignDeviceId').value = id;
+    document.getElementById('assignDeviceCode').textContent = code;
+    document.getElementById('assignLocation').textContent = location || 'Chưa có vị trí';
+    document.getElementById('assignClaimCode').textContent = claimCode || 'Đã sử dụng';
+    document.getElementById('assignUserId').value = '';
+    document.getElementById('assignModal').style.display = 'flex';
+  }
+  function hideAssignModal() { document.getElementById('assignModal').style.display = 'none'; }
+
+  document.querySelectorAll('.assign-device-btn').forEach(function(button) {
+    button.addEventListener('click', function() {
+      showAssignModal(this.dataset.deviceId, this.dataset.deviceCode, this.dataset.location, this.dataset.claimCode);
+    });
+  });
+
+  function filterDevices() {
+    var userId = document.getElementById('userFilter').value;
+    var rows = document.querySelectorAll('#deviceTable tbody tr');
+    rows.forEach(function(row) {
+      if (userId === '' || row.dataset.userId === userId || (userId === 'unassigned' && row.dataset.userId === '')) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+</script>
