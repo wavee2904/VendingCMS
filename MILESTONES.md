@@ -383,15 +383,48 @@ Deferred:
 
 ### Milestone 9: Event-Driven Schedule Cache Invalidation
 
-Status: Planned
+Status: Done
 
 Goal: Move schedule cache warm/invalidate flow from web request to RabbitMQ + Worker.
 
-Planned:
+Implemented:
 
-- Publish `ScheduleChangedEvent` after DB changes
-- Worker warms `mobile:schedule-content:*`
-- Worker invalidates device playback caches
+- Split shared code into layered class libraries:
+  - `VendingAd.Domain`
+  - `VendingAd.Application`
+  - `VendingAd.Infrastructure`
+- Web schedule write flows save DB changes first, then publish `ScheduleChangedEvent`.
+- Removed direct web-request calls to schedule cache refresh.
+- `ScheduleChangedEvent.AffectedDeviceCodes` now means all devices affected before or after the change.
+- Schedule reassignment publishes the union of old and new device codes.
+- Worker consumes `ScheduleChangedEvent` and delegates cache handling to `IScheduleCacheEventHandler`.
+- Worker invalidates per-device playback cache keys for every affected device.
+- Worker warms `mobile:schedule-content:*` only for schedules that still exist and are active.
+- Deleted or inactive schedules skip cache warm.
+- Handler logs cache failures and does not throw back into RabbitMQ processing; worker acknowledges and relies on TTL fallback.
+- Worker infrastructure fails fast if Redis is not enabled.
+- Added focused xUnit tests for cache handler behavior, cache key invalidation, and schedule reassignment event semantics.
+- Added separate CI/publish flow for web and worker artifacts.
+- Added `global.json` pinned to .NET 8 with roll-forward.
+
+Key files:
+
+- `VendingAdSolution/VendingAd.Application/Application/Services/PlaybackScheduleService.cs`
+- `VendingAdSolution/VendingAd.Application/Application/Services/ScheduleCacheEventHandler.cs`
+- `VendingAdSolution/VendingAd.Application/Application/Services/MobilePlaybackCacheService.cs`
+- `VendingAdSolution/VendingAd.Infrastructure/Infrastructure/DependencyInjection.cs`
+- `VendingAdSolution/VendingAdWorker/Worker.cs`
+- `VendingAdSolution/VendingAd.Tests/`
+- `.github/workflows/ci.yml`
+- `.github/workflows/publish.yml`
+
+Validation:
+
+- `dotnet restore`
+- `dotnet build`
+- `dotnet test`
+- publish web artifact
+- publish worker artifact
 
 ---
 

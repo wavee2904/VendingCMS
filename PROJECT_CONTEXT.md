@@ -2,11 +2,14 @@
 
 ## Overview
 
-- Repository: `/workspaces/vending-ad`
+- Repository: `/workspaces/VendingCMS`
 - Solution: `VendingAdSolution/VendingAdSolution.sln`
 - Main app: `VendingAdSolution/VendingAdSystem/VendingAdSystem.csproj`
 - Worker app: `VendingAdSolution/VendingAdWorker/VendingAdWorker.csproj`
 - Shared contracts: `VendingAdSolution/VendingAd.Contracts/VendingAd.Contracts.csproj`
+- Domain library: `VendingAdSolution/VendingAd.Domain/VendingAd.Domain.csproj`
+- Application library: `VendingAdSolution/VendingAd.Application/VendingAd.Application.csproj`
+- Infrastructure library: `VendingAdSolution/VendingAd.Infrastructure/VendingAd.Infrastructure.csproj`
 - Stack: ASP.NET Core MVC/Web API on .NET 8
 - Active branch: `dev`
 - Primary product: CMS for managing video playback schedules on vending machine displays / TV box devices
@@ -45,11 +48,11 @@
 ## Key Files
 
 - Controllers: `VendingAdSolution/VendingAdSystem/Controllers/`
-- Services: `VendingAdSolution/VendingAdSystem/Application/Services/`
-- DTOs: `VendingAdSolution/VendingAdSystem/Application/DTOs/`
-- Entities: `VendingAdSolution/VendingAdSystem/Domain/Entities/`
-- EF context: `VendingAdSolution/VendingAdSystem/Infrastructure/Persistence/AppDbContext.cs`
-- DI: `VendingAdSolution/VendingAdSystem/Infrastructure/DependencyInjection.cs`
+- Services: `VendingAdSolution/VendingAd.Application/Application/Services/`
+- DTOs: `VendingAdSolution/VendingAd.Application/Application/DTOs/`
+- Entities: `VendingAdSolution/VendingAd.Domain/Domain/Entities/`
+- EF context: `VendingAdSolution/VendingAd.Infrastructure/Infrastructure/Persistence/AppDbContext.cs`
+- DI: `VendingAdSolution/VendingAd.Infrastructure/Infrastructure/DependencyInjection.cs`
 - Main CSS: `VendingAdSolution/VendingAdSystem/wwwroot/css/site.css`
 - Milestone tracker: `MILESTONES.md`
 
@@ -143,9 +146,13 @@ Meaning:
 - `NullMessagePublisher` is used when RabbitMQ is disabled.
 - `RabbitMqMessagePublisher` publishes JSON messages to topic exchange `vendingad.events` when enabled.
 - Current event contracts: `ScheduleChangedEvent`, `VideoUploadedEvent`.
-- Schedule create/update/delete/toggle/item reorder flows publish `ScheduleChangedEvent` after DB/cache work.
+- Schedule create/update/delete/toggle/item reorder flows save DB changes first, then publish `ScheduleChangedEvent`.
+- Web requests no longer directly warm or invalidate schedule cache.
+- `ScheduleChangedEvent.AffectedDeviceCodes` means all devices affected before or after the change.
 - `VendingAdWorker` consumes `ScheduleChangedEvent` from queue `vendingad.worker.schedule-changed` with routing key `schedule.changed`.
-- Current worker behavior logs consumed events and acknowledges messages; real cache handling is planned for the next milestone.
+- Worker invalidates per-device playback cache keys and warms schedule content cache for active schedules.
+- Worker requires Redis through `AddWorkerInfrastructure`; startup fails fast if Redis is disabled or missing.
+- Worker logs handler failures and acknowledges messages for this milestone; stale cache is bounded by TTL fallback.
 
 Run app with RabbitMQ enabled temporarily:
 
@@ -254,17 +261,16 @@ Main completed areas so far:
 - Shared schedule playback cache for multi-device schedules
 - Redis device presence / heartbeat write throttling
 - Mobile API rate limiting for heartbeat and playback-state
+- Event-driven schedule cache invalidation through RabbitMQ worker
 - UI/UX improvements for date/time, thumbnails, video and playlist pages
 
 ## Recommended Next Steps
 
-1. RabbitMQ infrastructure.
-2. Worker service.
-3. Event-driven cache invalidation.
-4. Video metadata / thumbnail pipeline.
-5. Object storage / CDN.
-6. Observability.
-7. Load testing.
+1. Video metadata / thumbnail pipeline.
+2. Object storage / CDN.
+3. Observability and health checks.
+4. Load testing with simulated devices.
+5. Transactional outbox / DLQ when message reliability becomes production-critical.
 
 ## Useful Commands
 
@@ -272,6 +278,12 @@ Build:
 
 ```bash
 dotnet build "VendingAdSolution/VendingAdSolution.sln"
+```
+
+Test:
+
+```bash
+dotnet test "VendingAdSolution/VendingAdSolution.sln"
 ```
 
 Run app locally:
