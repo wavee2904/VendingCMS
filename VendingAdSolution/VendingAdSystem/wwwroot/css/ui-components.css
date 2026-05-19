@@ -4,11 +4,11 @@
 .dashboard-title { font-size: 2.8rem; font-weight: 700; color: #0f2247; margin-top: .25rem; }
 .dashboard-subtitle { color: #5f7393; margin-top: .2rem; }
 
-.surface-card { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; box-shadow: 0 4px 12px rgba(10, 35, 90, .04); }
+.surface-card { background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; box-shadow: 0 3px 10px rgba(10, 35, 90, .035); }
 
 .kpi-grid { display: grid; gap: 1rem; }
-.kpi-card { border: 1px solid var(--border); border-radius: 16px; background: #fff; padding: 1rem; box-shadow: 0 6px 16px rgba(10, 35, 90, .05); display: flex; gap: .9rem; transition: transform .15s ease, box-shadow .15s ease; }
-.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(10, 35, 90, .09); }
+.kpi-card { border: 1px solid var(--border); border-radius: 14px; background: #fff; padding: 1rem; box-shadow: 0 4px 12px rgba(10, 35, 90, .04); display: flex; gap: .9rem; transition: border-color .15s ease, box-shadow .15s ease; }
+.kpi-card:hover { border-color: #d4deeb; box-shadow: 0 7px 18px rgba(10, 35, 90, .06); }
 .kpi-icon { width: 58px; height: 58px; border-radius: 14px; display: grid; place-items: center; font-size: 1.5rem; }
 .kpi-value { font-size: 2rem; line-height: 1; color: #0f2247; }
 .kpi-label { color: #334768; font-weight: 600; margin-top: .25rem; }
@@ -107,8 +107,8 @@
 .custom-select-button:hover,
 .custom-select-wrap.open .custom-select-button {
   border-color: #9fb8ff;
-  background: #f8fbff;
-  box-shadow: 0 0 0 3px rgba(47, 87, 235, .12);
+  background: #f8fafc;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .09);
 }
 .custom-select-label {
   min-width: 0;

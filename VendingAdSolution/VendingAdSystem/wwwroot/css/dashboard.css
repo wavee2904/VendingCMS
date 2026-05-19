@@ -1,9 +1,9 @@
 :root {
-  --primary: #2f57eb;
-  --success: #22b573;
+  --primary: #2563eb;
+  --success: #16a34a;
   --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #7a3aed;
+  --danger: #dc2626;
+  --info: #0f72b8;
   --surface: #ffffff;
   --border: #e8edf5;
 }
@@ -29,16 +29,16 @@
 .kpi-card { min-height: 112px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); padding: .9rem; box-shadow: 0 6px 16px rgba(10, 35, 90, .05); display: grid; grid-template-columns: 50px 1fr; align-items: center; gap: .75rem; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
 .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(10, 35, 90, .09); border-color: #d9e4f3; }
 .kpi-icon { width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center; font-size: 1.28rem; }
-.tone-primary { background: #e9efff; color: var(--primary); }
-.tone-success { background: #e9f8f0; color: var(--success); }
-.tone-warning { background: #fff4e4; color: var(--warning); }
-.tone-danger { background: #ffeceb; color: var(--danger); }
-.tone-info { background: #f3ebff; color: var(--info); }
-.tone-border-primary { box-shadow: inset 0 3px 0 var(--primary), 0 6px 16px rgba(10, 35, 90, .05); }
-.tone-border-success { box-shadow: inset 0 3px 0 var(--success), 0 6px 16px rgba(10, 35, 90, .05); }
-.tone-border-warning { box-shadow: inset 0 3px 0 var(--warning), 0 6px 16px rgba(10, 35, 90, .05); }
-.tone-border-danger { box-shadow: inset 0 3px 0 var(--danger), 0 6px 16px rgba(10, 35, 90, .05); }
-.tone-border-info { box-shadow: inset 0 3px 0 var(--info), 0 6px 16px rgba(10, 35, 90, .05); }
+.tone-primary { background: #eaf1ff; color: var(--primary); }
+.tone-success { background: #eaf8ef; color: var(--success); }
+.tone-warning { background: #fff4e4; color: #b46a05; }
+.tone-danger { background: #feecec; color: var(--danger); }
+.tone-info { background: #eaf6ff; color: var(--info); }
+.tone-border-primary { box-shadow: inset 0 3px 0 rgba(37, 99, 235, .7), 0 5px 14px rgba(10, 35, 90, .045); }
+.tone-border-success { box-shadow: inset 0 3px 0 rgba(22, 163, 74, .62), 0 5px 14px rgba(10, 35, 90, .045); }
+.tone-border-warning { box-shadow: inset 0 3px 0 rgba(245, 158, 11, .62), 0 5px 14px rgba(10, 35, 90, .045); }
+.tone-border-danger { box-shadow: inset 0 3px 0 rgba(220, 38, 38, .58), 0 5px 14px rgba(10, 35, 90, .045); }
+.tone-border-info { box-shadow: inset 0 3px 0 rgba(15, 114, 184, .62), 0 5px 14px rgba(10, 35, 90, .045); }
 .kpi-content { min-width: 0; }
 .kpi-value { margin-top: .18rem; font-size: 1.8rem; line-height: 1; color: #0f2247; font-weight: 800; }
 .kpi-label { color: #5f7190; font-weight: 800; font-size: .8rem; margin: 0; }
@@ -59,7 +59,11 @@
 .schedule-panel-live::before { background: var(--success); }
 .schedule-panel-upcoming::before { background: var(--warning); }
 .schedule-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .8rem; }
-.status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: 0 0 auto; background: #94a3b8; box-shadow: 0 0 0 4px rgba(148, 163, 184, .16); }
+.status-dot.tone-success { background: var(--success); color: var(--success); box-shadow: 0 0 0 4px rgba(22, 163, 74, .16); }
+.status-dot.tone-warning { background: var(--warning); color: var(--warning); box-shadow: 0 0 0 4px rgba(245, 158, 11, .18); }
+.status-dot.tone-primary { background: var(--primary); color: var(--primary); box-shadow: 0 0 0 4px rgba(37, 99, 235, .15); }
+.status-dot.tone-danger { background: var(--danger); color: var(--danger); box-shadow: 0 0 0 4px rgba(220, 38, 38, .14); }
 .schedule-state-badge { min-height: 30px; display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: 0 .65rem; font-size: .76rem; font-weight: 800; white-space: nowrap; }
 .schedule-state-badge.live { background: #e8f8ef; color: #158651; }
 .schedule-state-badge.upcoming { background: #fff4e4; color: #9a6408; }

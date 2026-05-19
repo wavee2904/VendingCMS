@@ -60,8 +60,7 @@ textarea {
 
 /* Reusable app shell */
 body.app-shell-body {
-  background:
-    linear-gradient(180deg, #f7f9fd 0%, #f3f6fb 42%, #ffffff 100%);
+  background: linear-gradient(180deg, #f5f8ff 0%, #f6f8fb 42%, #ffffff 100%);
   color: #13213d;
 }
 
@@ -73,9 +72,9 @@ body.app-shell-body {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: #ffffff;
   border-right: 1px solid #dfe7f2;
-  box-shadow: 10px 0 30px rgba(15, 23, 42, 0.04);
+  box-shadow: 8px 0 24px rgba(15, 23, 42, 0.04);
 }
 
 .sidebar-logo {
@@ -97,11 +96,11 @@ body.app-shell-body {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  background: linear-gradient(145deg, #2563eb, #13a37d);
+  background: linear-gradient(145deg, #2563eb, #0ea5a0);
   color: #ffffff;
   font-size: 1rem;
   font-weight: 800;
-  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.22);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
 }
 
 .sidebar-logo-text {
@@ -167,7 +166,7 @@ body.app-shell-body {
 .nav-item.active {
   color: #173b8f;
   background: #eaf1ff;
-  border-color: #cfdcff;
+  border-color: #c9d8ff;
   box-shadow: inset 3px 0 0 #2563eb;
 }
 
@@ -214,7 +213,7 @@ body.app-shell-body {
   border: 1px solid #e4ebf5;
   border-radius: 16px;
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.035);
 }
 
 .user-details,
@@ -263,9 +262,9 @@ body.app-shell-body {
   margin: 0 -2rem 1.35rem;
   padding: 0.75rem 2rem;
   border-bottom: 1px solid rgba(210, 220, 235, 0.88);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .shared-header-title {
